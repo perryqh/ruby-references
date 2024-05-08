@@ -1,2 +1,2 @@
-pub(crate) mod preprocess;
+pub mod configuration;
 pub mod reference;
