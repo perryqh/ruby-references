@@ -1,0 +1,28 @@
+use std::{collections::HashMap, path::PathBuf};
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ConstantDefinition {
+    pub fully_qualified_name: String,
+    pub absolute_path_of_definition: PathBuf,
+}
+
+#[derive(Debug)]
+pub struct ConstantResolverConfiguration<'a> {
+    pub absolute_root: &'a PathBuf,
+    pub cache_directory: &'a PathBuf,
+    pub cache_enabled: bool,
+    pub inflections_path: &'a PathBuf,
+    pub autoload_roots: &'a HashMap<PathBuf, String>,
+}
+
+pub trait ConstantResolver {
+    fn resolve(
+        &self,
+        fully_or_partially_qualified_constant: &str,
+        namespace_path: &[&str],
+    ) -> Option<Vec<ConstantDefinition>>;
+
+    fn fully_qualified_constant_name_to_constant_definition_map(
+        &self,
+    ) -> &HashMap<String, Vec<ConstantDefinition>>;
+}
