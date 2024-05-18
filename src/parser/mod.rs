@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use serde::{Deserialize, Serialize};
+
 use crate::configuration;
 
 use self::processor::process_file;
@@ -30,7 +32,7 @@ pub struct ProcessedFile {
     pub unresolved_references: Vec<UnresolvedReference>,
 }
 
-#[derive(Debug, PartialEq, Default, Eq, Clone, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Default, Eq, Clone, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct SourceLocation {
     pub line: usize,
     pub column: usize,

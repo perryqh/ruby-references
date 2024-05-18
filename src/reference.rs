@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::Path};
 
 use anyhow::Context;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::{
@@ -10,7 +11,7 @@ use crate::{
     zeitwerk::get_zeitwerk_constant_resolver,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Reference {
     pub constant_name: String,
     pub relative_defining_file: Option<String>,
