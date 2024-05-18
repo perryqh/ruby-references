@@ -1,9 +1,9 @@
 use std::{
     collections::{HashMap, HashSet},
+    fmt,
     path::PathBuf,
 };
 
-#[derive(Debug)]
 pub struct Configuration {
     pub absolute_root: PathBuf,
     pub included_files: HashSet<PathBuf>,
@@ -15,6 +15,34 @@ pub struct Configuration {
     pub ruby_extensions: Vec<&'static str>,
     // Include references whose constants are defined in the same file
     pub include_reference_is_definition: bool,
+    pub extra_reference_fields_fn: Option<Box<dyn ExtraReferenceFieldsFn>>,
+}
+
+pub trait ExtraReferenceFieldsFn {
+    fn extra_reference_fields_fn(
+        &self,
+        relative_referencing_file: &str,
+        relative_defining_file: Option<&str>,
+    ) -> HashMap<String, String>;
+}
+
+impl fmt::Debug for Configuration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Configuration")
+            .field("absolute_root", &self.absolute_root)
+            .field("included_files", &self.included_files)
+            .field("acronyms", &self.acronyms)
+            .field("autoload_paths", &self.autoload_paths)
+            .field("custom_associations", &self.custom_associations)
+            .field("ruby_special_files", &self.ruby_special_files)
+            .field("ruby_extensions", &self.ruby_extensions)
+            .field(
+                "include_reference_is_definition",
+                &self.include_reference_is_definition,
+            )
+            // Skip `extra_reference_fields` because it cannot be formatted using Debug
+            .finish()
+    }
 }
 
 impl Default for Configuration {
@@ -28,6 +56,7 @@ impl Default for Configuration {
             ruby_special_files: vec!["Gemfile", "Rakefile"],
             ruby_extensions: vec!["rb", "rake", "builder", "gemspec", "ru"],
             include_reference_is_definition: false,
+            extra_reference_fields_fn: None,
         }
     }
 }

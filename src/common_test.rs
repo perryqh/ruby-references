@@ -10,7 +10,8 @@ pub mod common_test {
     use yaml_rust::YamlLoader;
 
     use crate::{
-        configuration::Configuration, constant_resolver::ConstantResolver,
+        configuration::{Configuration, ExtraReferenceFieldsFn},
+        constant_resolver::ConstantResolver,
         zeitwerk::get_zeitwerk_constant_resolver,
     };
 
@@ -19,13 +20,90 @@ pub mod common_test {
         let autoload_paths = autoload_paths_for_fixture(&absolute_root).unwrap();
         let acronyms = acronyms(&absolute_root);
         let included_files = file_paths(fixture_name).unwrap();
+        let pack_path = PackPath::new(&absolute_root);
+        let extra_reference_fields_fn =
+            Some(Box::new(pack_path) as Box<dyn ExtraReferenceFieldsFn>);
         Configuration {
             absolute_root,
             autoload_paths,
             acronyms,
             included_files,
             include_reference_is_definition: false,
+            extra_reference_fields_fn,
             ..Default::default()
+        }
+    }
+
+    pub struct PackPath {
+        pack_names: Vec<String>,
+    }
+
+    impl PackPath {
+        pub fn new(root: &PathBuf) -> Self {
+            let mut pack_names = vec![];
+            pack_names.extend(
+                expand_glob(root.join("**/package.yml").to_str().unwrap())
+                    .iter()
+                    .map(|path| {
+                        let val = path
+                            .parent()
+                            .unwrap() // Get the directory containing package.yml
+                            .strip_prefix(root)
+                            .unwrap() // Strip the root prefix
+                            .to_str()
+                            .unwrap() // Convert to str
+                            .to_string() // Convert to String
+                            .trim_start_matches('/') // Remove leading slash if any
+                            .to_string();
+                        if val.is_empty() {
+                            ".".to_string()
+                        } else {
+                            val
+                        }
+                    }),
+            );
+            pack_names.sort();
+            PackPath { pack_names }
+        }
+
+        pub fn find_pack_name(&self, file_path: &str) -> Option<String> {
+            // pack names are sorted
+            // once a pack_name is found that contains the file_path
+            // use the longest one until the file_path is not found
+            let mut pack_name = ".";
+            let mut containing = false;
+            for pn in self.pack_names.iter() {
+                if file_path.contains(pn) {
+                    if pn.len() > pack_name.len() {
+                        pack_name = pn;
+                        containing = true;
+                    }
+                } else {
+                    if containing {
+                        break;
+                    }
+                }
+            }
+            Some(pack_name.to_string())
+        }
+    }
+
+    impl ExtraReferenceFieldsFn for PackPath {
+        fn extra_reference_fields_fn(
+            &self,
+            relative_referencing_file: &str,
+            relative_defining_file: Option<&str>,
+        ) -> HashMap<String, String> {
+            let mut extra_fields = HashMap::new();
+            if let Some(referencing_pack) = self.find_pack_name(relative_referencing_file) {
+                extra_fields.insert("referencing_pack_name".to_string(), referencing_pack);
+            }
+            if let Some(defining_file) = relative_defining_file {
+                if let Some(defining_pack) = self.find_pack_name(defining_file) {
+                    extra_fields.insert("defining_pack_name".to_string(), defining_pack);
+                }
+            }
+            extra_fields
         }
     }
 
@@ -130,5 +208,24 @@ pub mod common_test {
             })
             .collect::<std::collections::HashSet<PathBuf>>();
         Ok(paths)
+    }
+
+    #[test]
+    fn test_pack_path() {
+        let root = PathBuf::from("tests/fixtures/simple_app");
+        let pack_path = PackPath::new(&root);
+        assert_eq!(
+            pack_path.pack_names,
+            vec![".", "packs/bar", "packs/baz", "packs/foo",]
+        );
+
+        assert_eq!(
+            pack_path.find_pack_name("frontend/ui_helper.rb"),
+            Some(".".to_string())
+        );
+        assert_eq!(
+            pack_path.find_pack_name("packs/foo/app/services/foo/bar.rb"),
+            Some("packs/foo".to_string())
+        );
     }
 }
