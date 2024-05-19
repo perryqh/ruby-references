@@ -1,7 +1,9 @@
+pub(crate) mod cache;
+pub(crate) mod cached_file;
 pub mod configuration;
-pub mod constant_resolver;
-pub mod parser;
+pub(crate) mod constant_resolver;
+pub(crate) mod parser;
 pub mod reference;
-pub mod zeitwerk;
+pub(crate) mod zeitwerk;
 
-pub mod common_test;
+pub(crate) mod common_test;

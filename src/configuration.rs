@@ -4,6 +4,8 @@ use std::{
     path::PathBuf,
 };
 
+use crate::{cache::{create_cache_dir_idempotently, Cache, NoopCache}, cached_file::CachedFile};
+
 pub struct Configuration {
     pub absolute_root: PathBuf,
     pub included_files: HashSet<PathBuf>,
@@ -15,6 +17,8 @@ pub struct Configuration {
     pub ruby_extensions: Vec<&'static str>,
     // Include references whose constants are defined in the same file
     pub include_reference_is_definition: bool,
+    pub cache_enabled: bool,
+    pub cache_directory: PathBuf,
     pub extra_reference_fields_fn: Option<Box<dyn ExtraReferenceFieldsFn>>,
 }
 
@@ -36,6 +40,8 @@ impl fmt::Debug for Configuration {
             .field("custom_associations", &self.custom_associations)
             .field("ruby_special_files", &self.ruby_special_files)
             .field("ruby_extensions", &self.ruby_extensions)
+            .field("cache_enabled", &self.cache_enabled)
+            .field("cache_directory", &self.cache_directory)
             .field(
                 "include_reference_is_definition",
                 &self.include_reference_is_definition,
@@ -56,7 +62,23 @@ impl Default for Configuration {
             ruby_special_files: vec!["Gemfile", "Rakefile"],
             ruby_extensions: vec!["rb", "rake", "builder", "gemspec", "ru"],
             include_reference_is_definition: false,
+            cache_enabled: false,
+            cache_directory: PathBuf::from("tmp/cache"),
             extra_reference_fields_fn: None,
+        }
+    }
+}
+
+impl Configuration {
+    pub(crate) fn get_cache(&self) -> Box<dyn Cache + Send + Sync> {
+        if self.cache_enabled {
+            let cache_dir = self.cache_directory.join("ruby-references");
+
+            create_cache_dir_idempotently(&cache_dir);
+
+            Box::new(CachedFile { cache_dir })
+        } else {
+            Box::new(NoopCache {})
         }
     }
 }

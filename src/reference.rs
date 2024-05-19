@@ -138,7 +138,6 @@ pub fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Refer
         parse(&configuration).context("failed to parse processed files")?;
     let constant_resolver = get_zeitwerk_constant_resolver(&configuration);
     debug!("Turning unresolved references into fully qualified references");
-
     let mut references = Vec::new();
     for process_file in processed_files_to_check.iter() {
         for unresolved_ref in process_file.unresolved_references.iter() {
