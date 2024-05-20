@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::configuration;
+use crate::{cache::CacheResult, configuration};
 
 use self::processor::process_file;
 
@@ -47,10 +47,26 @@ pub struct UnresolvedReference {
 
 // TODO: cache
 pub fn parse(configuration: &configuration::Configuration) -> anyhow::Result<Vec<ProcessedFile>> {
+    let cache = configuration.get_cache();
+
     configuration
         .included_files
         .iter()
-        .map(|path| -> anyhow::Result<ProcessedFile> { process_file(path, configuration) })
+        .map(|path| -> anyhow::Result<ProcessedFile> {
+            match cache.get(path) {
+                Ok(CacheResult::Processed(processed_file)) => {
+                    return Ok(processed_file);
+                }
+                Ok(CacheResult::Miss(empty_cache_entry)) => {
+                    let processed_file = process_file(path, configuration)?;
+                    cache.write(&empty_cache_entry, &processed_file)?;
+                    return Ok(processed_file);
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        })
         .collect()
 }
 

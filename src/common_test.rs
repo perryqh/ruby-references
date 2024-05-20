@@ -15,7 +15,7 @@ pub mod common_test {
         zeitwerk::get_zeitwerk_constant_resolver,
     };
 
-    pub fn configuration_for_fixture(fixture_name: &str) -> Configuration {
+    pub fn configuration_for_fixture(fixture_name: &str, cache_enabled: bool) -> Configuration {
         let absolute_root = get_absolute_root(fixture_name);
         let autoload_paths = autoload_paths_for_fixture(&absolute_root).unwrap();
         let acronyms = acronyms(&absolute_root);
@@ -30,6 +30,7 @@ pub mod common_test {
             included_files,
             include_reference_is_definition: false,
             extra_reference_fields_fn,
+            cache_enabled,
             ..Default::default()
         }
     }
@@ -110,7 +111,7 @@ pub mod common_test {
     pub fn get_zeitwerk_constant_resolver_for_fixture(
         fixture_name: &str,
     ) -> anyhow::Result<Box<dyn ConstantResolver>> {
-        let configuration = configuration_for_fixture(fixture_name);
+        let configuration = configuration_for_fixture(fixture_name, false);
 
         Ok(get_zeitwerk_constant_resolver(&configuration))
     }

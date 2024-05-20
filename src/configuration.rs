@@ -4,7 +4,10 @@ use std::{
     path::PathBuf,
 };
 
-use crate::{cache::{create_cache_dir_idempotently, Cache, NoopCache}, cached_file::CachedFile};
+use crate::{
+    cache::{create_cache_dir_idempotently, Cache, NoopCache},
+    cached_file::CachedFile,
+};
 
 pub struct Configuration {
     pub absolute_root: PathBuf,
@@ -74,12 +77,16 @@ impl Configuration {
         if self.cache_enabled {
             let cache_dir = self.cache_directory.join("ruby-references");
 
-            create_cache_dir_idempotently(&cache_dir);
+            let _ = create_cache_dir_idempotently(&cache_dir);
 
             Box::new(CachedFile { cache_dir })
         } else {
             Box::new(NoopCache {})
         }
+    }
+
+    pub(crate) fn delete_cache(&self) -> anyhow::Result<()>{
+        Ok(std::fs::remove_dir_all(&self.cache_directory)?)
     }
 }
 #[cfg(test)]

@@ -31,11 +31,20 @@ pub struct EmptyCacheEntry {
     pub cache_file_path: PathBuf,
 }
 
+// This function is used to generate the cache file path from the digest of the file name
+// The cache file path is a directory structure with the first two characters of the digest as the directory name
+// and the rest of the digest as the file name
+fn cache_file_path_from_digest(cache_directory: &Path, file_name_digest: &str) -> PathBuf {
+    let cached_directory_for_digest = cache_directory.join(&file_name_digest[..2]);
+    let _ = std::fs::create_dir_all(&cached_directory_for_digest);
+    cached_directory_for_digest.join(&file_name_digest[2..])
+}
+
 impl EmptyCacheEntry {
     pub fn new(cache_directory: &Path, filepath: &Path) -> anyhow::Result<EmptyCacheEntry> {
         let file_digest = md5::compute(filepath.to_str().unwrap());
         let file_name_digest = format!("{:x}", file_digest);
-        let cache_file_path = cache_directory.join(&file_name_digest);
+        let cache_file_path = cache_file_path_from_digest(cache_directory, &file_name_digest);
 
         let file_contents_digest = file_content_digest(filepath)?;
 

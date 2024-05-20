@@ -24,7 +24,6 @@ pub fn get_zeitwerk_constant_resolver(
 }
 
 fn inferred_constants(configuration: &Configuration) -> Vec<ConstantDefinition> {
-    debug!("Get constant resolver cache");
     // First, we get a map of each autoload path to the files they map to.
     let autoload_paths_to_their_globbed_files = configuration
         .autoload_paths

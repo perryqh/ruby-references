@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn simple_all_references() -> anyhow::Result<()> {
-        let configuration = configuration_for_fixture(SIMPLE_APP);
+        let configuration = configuration_for_fixture(SIMPLE_APP, true);
         let mut references = all_references(&configuration)?;
         references.sort();
         let expected = json::parse(&fs::read_to_string(
@@ -208,7 +208,13 @@ mod tests {
         for (reference, expected) in references.iter().zip(expected.iter()) {
             assert_eq!(reference, expected);
         }
-        //assert_eq!(references, expected);
+
+        let mut cache_hit_references = all_references(&configuration)?;
+        cache_hit_references.sort();
+        for (reference, expected) in cache_hit_references.iter().zip(expected.iter()) {
+            assert_eq!(reference, expected);
+        }
+        configuration.delete_cache()?;
         Ok(())
     }
 }
