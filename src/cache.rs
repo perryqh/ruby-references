@@ -36,7 +36,6 @@ pub struct EmptyCacheEntry {
 // and the rest of the digest as the file name
 fn cache_file_path_from_digest(cache_directory: &Path, file_name_digest: &str) -> PathBuf {
     let cached_directory_for_digest = cache_directory.join(&file_name_digest[..2]);
-    let _ = std::fs::create_dir_all(&cached_directory_for_digest);
     cached_directory_for_digest.join(&file_name_digest[2..])
 }
 

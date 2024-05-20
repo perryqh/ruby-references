@@ -85,7 +85,7 @@ impl Configuration {
         }
     }
 
-    pub(crate) fn delete_cache(&self) -> anyhow::Result<()>{
+    pub(crate) fn delete_cache(&self) -> anyhow::Result<()> {
         Ok(std::fs::remove_dir_all(&self.cache_directory)?)
     }
 }

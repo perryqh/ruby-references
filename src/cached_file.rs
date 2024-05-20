@@ -7,6 +7,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use tracing::warn;
 
+use crate::cache::create_cache_dir_idempotently;
 use crate::cache::CacheResult;
 use crate::cache::EmptyCacheEntry;
 use crate::parser::ProcessedFile;
@@ -53,12 +54,18 @@ impl Cache for CachedFile {
 
         let cache_data =
             serde_json::to_string(&cache_entry).context("Failed to serialize references")?;
-        let mut file = File::create(&empty_cache_entry.cache_file_path).map_err(|e| {
-            anyhow::Error::new(e).context(format!(
-                "Failed to create cache file {:?}",
-                empty_cache_entry.cache_file_path
-            ))
-        })?;
+        let mut file = match File::create(&empty_cache_entry.cache_file_path) {
+            Ok(file) => file,
+            Err(_e) => {
+                let parent_dir = empty_cache_entry.cache_file_path.parent().context(format!(
+                    "Failed to get parent directory for {:?}",
+                    empty_cache_entry.cache_file_path
+                ))?;
+                create_cache_dir_idempotently(parent_dir)?;
+                File::create(&empty_cache_entry.cache_file_path)
+                    .context("failed to create cache file")?
+            }
+        };
 
         file.write_all(cache_data.as_bytes())
             .context("Failed to write cache file")?;
