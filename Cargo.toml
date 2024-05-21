@@ -1,0 +1,28 @@
+[package]
+name = "ruby-references"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.82"
+glob = "0.3.1" 
+globset = "0.4.14"
+lib-ruby-parser = "4.0.6+ruby-3.1.2"
+line-col = "0.2.1"
+md5 = "0.7.0"
+rayon = "1.7.0"
+regex = "1.10.4"
+ruby_inflector = "0.0.10"
+serde = { version = "1.0.202", features = ["derive"] }
+serde_json = "1.0.117"
+tracing = "0.1"
+tracing-subscriber = "0.3.18"
+walkdir = "2.5.0"
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"
+predicates = "3.1.0"
+yaml-rust = "0.4.5"
+json = "0.12.4"

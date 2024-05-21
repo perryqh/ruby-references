@@ -1,0 +1,123 @@
+[
+  {
+    "constant_name": "::Foo",
+    "defining_pack_name": "packs/foo",
+    "relative_defining_file": "packs/foo/app/services/foo.rb",
+    "referencing_pack_name": "packs/foo",
+    "relative_referencing_file": "packs/foo/app/services/foo/bar.rb",
+    "source_location": {
+      "line": 2,
+      "column": 7
+    }
+  },
+  {
+    "constant_name": "::Foo::Bar",
+    "defining_pack_name": "packs/foo",
+    "relative_defining_file": "packs/foo/app/services/foo/bar.rb",
+    "referencing_pack_name": "packs/foo",
+    "relative_referencing_file": "packs/foo/app/services/foo/bar.rb",
+    "source_location": {
+      "line": 3,
+      "column": 9
+    }
+  },
+  {
+    "constant_name": "::SomeRootClass",
+    "defining_pack_name": ".",
+    "relative_defining_file": "app/services/some_root_class.rb",
+    "referencing_pack_name": ".",
+    "relative_referencing_file": "app/services/some_root_class.rb",
+    "source_location": {
+      "line": 1,
+      "column": 6
+    }
+  },
+  {
+    "constant_name": "::Company",
+    "defining_pack_name": null,
+    "relative_defining_file": null,
+    "referencing_pack_name": ".",
+    "relative_referencing_file": "app/company_data/widget.rb",
+    "source_location": {
+      "line": 1,
+      "column": 7
+    }
+  },
+  {
+    "constant_name": "::Company::Widget",
+    "defining_pack_name": ".",
+    "relative_defining_file": "app/company_data/widget.rb",
+    "referencing_pack_name": ".",
+    "relative_referencing_file": "app/company_data/widget.rb",
+    "source_location": {
+      "line": 2,
+      "column": 8
+    }
+  },
+  {
+    "constant_name": "::UiHelper",
+    "defining_pack_name": null,
+    "relative_defining_file": null,
+    "referencing_pack_name": ".",
+    "relative_referencing_file": "frontend/ui_helper.rb",
+    "source_location": {
+      "line": 1,
+      "column": 7
+    }
+  },
+  {
+    "constant_name": "::SomeConcern",
+    "defining_pack_name": "packs/bar",
+    "relative_defining_file": "packs/bar/app/models/concerns/some_concern.rb",
+    "referencing_pack_name": "packs/bar",
+    "relative_referencing_file": "packs/bar/app/models/concerns/some_concern.rb",
+    "source_location": {
+      "line": 1,
+      "column": 7
+    }
+  },
+  {
+    "constant_name": "::Bar",
+    "defining_pack_name": "packs/bar",
+    "relative_defining_file": "packs/bar/app/services/bar.rb",
+    "referencing_pack_name": "packs/bar",
+    "relative_referencing_file": "packs/bar/app/services/bar.rb",
+    "source_location": {
+      "line": 1,
+      "column": 7
+    }
+  },
+  {
+    "constant_name": "::Foo",
+    "defining_pack_name": "packs/foo",
+    "relative_defining_file": "packs/foo/app/services/foo.rb",
+    "referencing_pack_name": "packs/foo",
+    "relative_referencing_file": "packs/foo/app/services/foo.rb",
+    "source_location": {
+      "line": 1,
+      "column": 7
+    }
+  },
+  {
+    "constant_name": "::Bar",
+    "defining_pack_name": "packs/bar",
+    "relative_defining_file": "packs/bar/app/services/bar.rb",
+    "referencing_pack_name": "packs/foo",
+    "relative_referencing_file": "packs/foo/app/services/foo.rb",
+    "source_location": {
+      "line": 3,
+      "column": 4
+    }
+  },
+  {
+    "constant_name": "::Baz",
+    "defining_pack_name": "packs/baz",
+    "relative_defining_file": "packs/baz/app/services/baz.rb",
+    "referencing_pack_name": "packs/foo",
+    "relative_referencing_file": "packs/foo/app/services/foo.rb",
+    "source_location": {
+      "line": 7,
+      "column": 4
+    }
+  }
+]
