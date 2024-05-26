@@ -45,8 +45,9 @@ pub struct UnresolvedReference {
     pub location: Range,
 }
 
-// TODO: cache
-pub fn parse(configuration: &configuration::Configuration) -> anyhow::Result<Vec<ProcessedFile>> {
+pub async fn parse(
+    configuration: &configuration::Configuration,
+) -> anyhow::Result<Vec<ProcessedFile>> {
     let cache = configuration.get_cache();
 
     configuration
@@ -76,14 +77,14 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn simple_parse() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn simple_parse() -> anyhow::Result<()> {
         let included_files = file_paths("tests/fixtures/small-app")?;
         let configuration = configuration::Configuration {
             included_files,
             ..Default::default()
         };
-        let result = parse(&configuration)?;
+        let result = parse(&configuration).await?;
         let processed_paths: Vec<&str> = result
             .iter()
             .map(|pfile| pfile.absolute_path.to_str().unwrap())

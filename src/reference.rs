@@ -52,7 +52,7 @@ impl Ord for Reference {
 }
 
 impl Reference {
-    pub fn from_unresolved_reference(
+    pub async fn from_unresolved_reference(
         configuration: &Configuration,
         constant_resolver: &(dyn ConstantResolver + Send + Sync),
         unresolved_reference: &UnresolvedReference,
@@ -133,9 +133,10 @@ impl Reference {
     }
 }
 
-pub fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Reference>> {
-    let processed_files_to_check =
-        parse(&configuration).context("failed to parse processed files")?;
+pub async fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Reference>> {
+    let processed_files_to_check = parse(&configuration)
+        .await
+        .context("failed to parse processed files")?;
     let constant_resolver = get_zeitwerk_constant_resolver(&configuration);
     debug!("Turning unresolved references into fully qualified references");
     let mut references = Vec::new();
@@ -146,7 +147,8 @@ pub fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Refer
                 constant_resolver.as_ref(),
                 unresolved_ref,
                 &process_file.absolute_path,
-            )?;
+            )
+            .await?;
             references.extend(new_references);
         }
     }
@@ -164,10 +166,10 @@ mod tests {
     use crate::common_test::common_test::{configuration_for_fixture, SIMPLE_APP};
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn simple_all_references() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn simple_all_references() -> anyhow::Result<()> {
         let configuration = configuration_for_fixture(SIMPLE_APP, true);
-        let mut references = all_references(&configuration)?;
+        let mut references = all_references(&configuration).await?;
         references.sort();
         let expected = json::parse(&fs::read_to_string(
             "tests/fixtures/simple_app/references.json",
@@ -209,7 +211,7 @@ mod tests {
             assert_eq!(reference, expected);
         }
 
-        let mut cache_hit_references = all_references(&configuration)?;
+        let mut cache_hit_references = all_references(&configuration).await?;
         cache_hit_references.sort();
         for (reference, expected) in cache_hit_references.iter().zip(expected.iter()) {
             assert_eq!(reference, expected);
