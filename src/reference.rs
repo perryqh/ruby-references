@@ -153,12 +153,11 @@ pub fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Refer
                 Ok(acc)
             },
         )
-        .try_reduce(Vec::new,
-        |mut acc, mut vec| {
+        .try_reduce(Vec::new, |mut acc, mut vec| {
             acc.append(&mut vec);
             Ok(acc)
         });
-        references
+    references
 }
 
 #[cfg(test)]

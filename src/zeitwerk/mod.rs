@@ -1,3 +1,4 @@
+mod cache;
 mod constant_resolver;
 
 use std::{
@@ -25,6 +26,7 @@ pub fn get_zeitwerk_constant_resolver(
 }
 
 fn inferred_constants(configuration: &Configuration) -> Vec<ConstantDefinition> {
+    let cache_data = cache::get_constant_resolver_cache(&configuration.cache_directory);
     // First, we get a map of each autoload path to the files they map to.
     let autoload_paths_to_their_globbed_files = configuration
         .autoload_paths
@@ -72,18 +74,34 @@ fn inferred_constants(configuration: &Configuration) -> Vec<ConstantDefinition> 
         .into_iter()
         .par_bridge()
         .map(|(absolute_path_of_definition, absolute_autoload_path)| {
-            let default_namespace = configuration
-                .autoload_paths
-                .get(absolute_autoload_path)
-                .unwrap();
-            inferred_constant_from_file(
-                absolute_path_of_definition,
-                absolute_autoload_path,
-                &configuration.acronyms,
-                default_namespace,
-            )
+            if let Some(fully_qualified_name) = cache_data
+                .file_definition_map
+                .get(absolute_path_of_definition)
+            {
+                ConstantDefinition {
+                    fully_qualified_name: fully_qualified_name.to_owned(),
+                    absolute_path_of_definition: absolute_path_of_definition.to_owned(),
+                }
+            } else {
+                let default_namespace = configuration
+                    .autoload_paths
+                    .get(absolute_autoload_path)
+                    .unwrap();
+                inferred_constant_from_file(
+                    absolute_path_of_definition,
+                    absolute_autoload_path,
+                    &configuration.acronyms,
+                    default_namespace,
+                )
+            }
         })
         .collect::<Vec<ConstantDefinition>>();
+
+    cache::write_cache_constant_definitions(
+        &constants,
+        &configuration.reference_cache_dir(),
+        configuration.cache_enabled,
+    );
 
     constants
 }

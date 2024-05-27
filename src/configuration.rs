@@ -75,7 +75,7 @@ impl Default for Configuration {
 impl Configuration {
     pub(crate) fn get_cache(&self) -> Box<dyn Cache + Send + Sync> {
         if self.cache_enabled {
-            let cache_dir = self.cache_directory.join("ruby-references");
+            let cache_dir = self.reference_cache_dir();
 
             let _ = create_cache_dir_idempotently(&cache_dir);
 
@@ -87,6 +87,10 @@ impl Configuration {
 
     pub(crate) fn delete_cache(&self) -> anyhow::Result<()> {
         Ok(std::fs::remove_dir_all(&self.cache_directory)?)
+    }
+
+    pub(crate) fn reference_cache_dir(&self) -> PathBuf {
+        self.cache_directory.join("ruby-references")
     }
 }
 #[cfg(test)]
