@@ -20,34 +20,32 @@ pub struct Reference {
     pub extra_fields: HashMap<String, String>,
 }
 
-impl PartialOrd for Reference {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(
-            self.constant_name
-                .cmp(&other.constant_name)
-                .then_with(|| {
-                    self.relative_defining_file
-                        .as_ref()
-                        .cmp(&other.relative_defining_file.as_ref())
-                })
-                .then_with(|| {
-                    self.relative_referencing_file
-                        .cmp(&other.relative_referencing_file)
-                })
-                .then_with(|| self.source_location.line.cmp(&other.source_location.line))
-                .then_with(|| {
-                    self.source_location
-                        .column
-                        .cmp(&other.source_location.column)
-                })
-                .then_with(|| self.extra_fields.len().cmp(&other.extra_fields.len())),
-        )
+impl Ord for Reference {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.constant_name
+            .cmp(&other.constant_name)
+            .then_with(|| {
+                self.relative_defining_file
+                    .as_ref()
+                    .cmp(&other.relative_defining_file.as_ref())
+            })
+            .then_with(|| {
+                self.relative_referencing_file
+                    .cmp(&other.relative_referencing_file)
+            })
+            .then_with(|| self.source_location.line.cmp(&other.source_location.line))
+            .then_with(|| {
+                self.source_location
+                    .column
+                    .cmp(&other.source_location.column)
+            })
+            .then_with(|| self.extra_fields.len().cmp(&other.extra_fields.len()))
     }
 }
 
-impl Ord for Reference {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.partial_cmp(other).unwrap()
+impl PartialOrd for Reference {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -101,7 +99,7 @@ impl Reference {
                         .extra_reference_fields_fn
                         .as_ref()
                         .map(|fn_| fn_.extra_reference_fields_fn(&relative_referencing_file, relative_defining_file.as_deref()))
-                        .unwrap_or_else(|| HashMap::new());
+                        .unwrap_or_default();
 
                     Ok(Reference {
                         constant_name,
@@ -120,7 +118,7 @@ impl Reference {
                 .extra_reference_fields_fn
                 .as_ref()
                 .map(|fn_| fn_.extra_reference_fields_fn(&relative_referencing_file, None))
-                .unwrap_or_else(|| HashMap::new());
+                .unwrap_or_default();
 
             Ok(vec![Reference {
                 constant_name,
@@ -135,14 +133,14 @@ impl Reference {
 
 pub fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Reference>> {
     let processed_files_to_check =
-        parse(&configuration).context("failed to parse processed files")?;
-    let constant_resolver = get_zeitwerk_constant_resolver(&configuration);
+        parse(configuration).context("failed to parse processed files")?;
+    let constant_resolver = get_zeitwerk_constant_resolver(configuration);
     debug!("Turning unresolved references into fully qualified references");
     let mut references = Vec::new();
     for process_file in processed_files_to_check.iter() {
         for unresolved_ref in process_file.unresolved_references.iter() {
             let new_references = Reference::from_unresolved_reference(
-                &configuration,
+                configuration,
                 constant_resolver.as_ref(),
                 unresolved_ref,
                 &process_file.absolute_path,

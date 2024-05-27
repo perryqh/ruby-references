@@ -54,17 +54,13 @@ pub fn parse(configuration: &configuration::Configuration) -> anyhow::Result<Vec
         .iter()
         .map(|path| -> anyhow::Result<ProcessedFile> {
             match cache.get(path) {
-                Ok(CacheResult::Processed(processed_file)) => {
-                    return Ok(processed_file);
-                }
+                Ok(CacheResult::Processed(processed_file)) => Ok(processed_file),
                 Ok(CacheResult::Miss(empty_cache_entry)) => {
                     let processed_file = process_file(path, configuration)?;
                     cache.write(&empty_cache_entry, &processed_file)?;
-                    return Ok(processed_file);
+                    Ok(processed_file)
                 }
-                Err(e) => {
-                    return Err(e);
-                }
+                Err(e) => Err(e),
             }
         })
         .collect()
@@ -72,7 +68,11 @@ pub fn parse(configuration: &configuration::Configuration) -> anyhow::Result<Vec
 
 #[cfg(test)]
 mod tests {
-    use crate::common_test::common_test::file_paths;
+    use crate::{
+        cache::Cache,
+        cached_file::CachedFile,
+        common_test::common_test::{configuration_for_fixture, file_paths, SIMPLE_APP},
+    };
 
     use super::*;
 
@@ -102,6 +102,39 @@ mod tests {
             ),
             true
         );
+        Ok(())
+    }
+    #[test]
+    fn test_cache_hit() -> anyhow::Result<()> {
+        let configuration = configuration_for_fixture(SIMPLE_APP, true);
+        let cache_dir = configuration.cache_directory.clone();
+        let file_path = PathBuf::from("tests/fixtures/simple_app/app/company_data/widget.rb");
+        let _ = configuration.delete_cache();
+
+        let cached_file = CachedFile {
+            cache_dir: PathBuf::from(&cache_dir),
+        };
+        let cache_result = cached_file.get(&file_path);
+        assert!(cache_result.is_ok());
+        match cache_result.unwrap() {
+            CacheResult::Miss(empty_cache_entry) => {
+                let processed_file = process_file(&file_path, &configuration)?;
+                let cache = configuration.get_cache();
+                cache.write(&empty_cache_entry, &processed_file)?;
+            }
+            _ => {
+                assert!(false)
+            }
+        }
+        let cache_result = cached_file.get(&file_path);
+        assert!(cache_result.is_ok());
+        match cache_result.unwrap() {
+            CacheResult::Miss(_) => assert!(false),
+            CacheResult::Processed(processed_file) => {
+                assert_eq!(processed_file.absolute_path, file_path);
+            }
+        }
+
         Ok(())
     }
 }

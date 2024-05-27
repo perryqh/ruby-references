@@ -57,7 +57,7 @@ impl EmptyCacheEntry {
 }
 
 pub fn create_cache_dir_idempotently(cache_dir: &Path) -> anyhow::Result<()> {
-    Ok(std::fs::create_dir_all(cache_dir).context("Failed to create cache directory")?)
+    std::fs::create_dir_all(cache_dir).context("Failed to create cache directory")
 }
 
 pub struct NoopCache {}
