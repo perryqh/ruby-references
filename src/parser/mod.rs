@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use crate::{cache::CacheResult, configuration};
@@ -45,13 +46,12 @@ pub struct UnresolvedReference {
     pub location: Range,
 }
 
-// TODO: cache
 pub fn parse(configuration: &configuration::Configuration) -> anyhow::Result<Vec<ProcessedFile>> {
     let cache = configuration.get_cache();
 
     configuration
         .included_files
-        .iter()
+        .par_iter()
         .map(|path| -> anyhow::Result<ProcessedFile> {
             match cache.get(path) {
                 Ok(CacheResult::Processed(processed_file)) => Ok(processed_file),

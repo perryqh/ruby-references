@@ -25,7 +25,7 @@ pub struct Configuration {
     pub extra_reference_fields_fn: Option<Box<dyn ExtraReferenceFieldsFn>>,
 }
 
-pub trait ExtraReferenceFieldsFn {
+pub trait ExtraReferenceFieldsFn: Sync + Send {
     fn extra_reference_fields_fn(
         &self,
         relative_referencing_file: &str,
