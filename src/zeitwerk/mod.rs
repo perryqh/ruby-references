@@ -5,6 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use tracing::debug;
 
 use crate::{
@@ -28,6 +29,7 @@ fn inferred_constants(configuration: &Configuration) -> Vec<ConstantDefinition> 
     let autoload_paths_to_their_globbed_files = configuration
         .autoload_paths
         .keys()
+        .par_bridge()
         .map(|absolute_autoload_path| {
             let glob_path = absolute_autoload_path.join("**/*.rb");
 
@@ -68,6 +70,7 @@ fn inferred_constants(configuration: &Configuration) -> Vec<ConstantDefinition> 
     debug!("Inferring constants from file name");
     let constants: Vec<ConstantDefinition> = file_to_longest_path
         .into_iter()
+        .par_bridge()
         .map(|(absolute_path_of_definition, absolute_autoload_path)| {
             let default_namespace = configuration
                 .autoload_paths

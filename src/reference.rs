@@ -1,8 +1,8 @@
 use std::{collections::HashMap, path::Path};
 
 use anyhow::Context;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
-use tracing::debug;
 
 use crate::{
     configuration::Configuration,
@@ -135,23 +135,30 @@ pub fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Refer
     let processed_files_to_check =
         parse(configuration).context("failed to parse processed files")?;
     let constant_resolver = get_zeitwerk_constant_resolver(configuration);
-    debug!("Turning unresolved references into fully qualified references");
-    let mut references = Vec::new();
-    for process_file in processed_files_to_check.iter() {
-        for unresolved_ref in process_file.unresolved_references.iter() {
-            let new_references = Reference::from_unresolved_reference(
-                configuration,
-                constant_resolver.as_ref(),
-                unresolved_ref,
-                &process_file.absolute_path,
-            )?;
-            references.extend(new_references);
-        }
-    }
-
-    debug!("Finished turning unresolved references into fully qualified references");
-
-    Ok(references)
+    let references: anyhow::Result<Vec<Reference>> = processed_files_to_check
+        .par_iter()
+        .try_fold(
+            Vec::new,
+            // Start with an empty vector for each thread
+            |mut acc, processed_file| {
+                for unresolved_ref in processed_file.unresolved_references.iter() {
+                    let new_references = Reference::from_unresolved_reference(
+                        configuration,
+                        constant_resolver.as_ref(),
+                        unresolved_ref,
+                        &processed_file.absolute_path,
+                    )?;
+                    acc.extend(new_references);
+                }
+                Ok(acc)
+            },
+        )
+        .try_reduce(Vec::new,
+        |mut acc, mut vec| {
+            acc.append(&mut vec);
+            Ok(acc)
+        });
+        references
 }
 
 #[cfg(test)]
