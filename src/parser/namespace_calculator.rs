@@ -27,7 +27,7 @@ pub(crate) fn calculate_module_nesting(namespace_nesting: &[&str]) -> Vec<String
             format!("{}::{}", previous, namespace)
         };
 
-        previous = new_nesting.to_owned();
+        new_nesting.clone_into(&mut previous);
         nesting.insert(0, new_nesting);
     });
 

@@ -1,5 +1,7 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 
 use crate::{cache::CacheResult, configuration};
@@ -45,30 +47,28 @@ pub struct UnresolvedReference {
     pub location: Range,
 }
 
+// TODO: benchmark with criterion crate
 pub async fn parse(
     configuration: &configuration::Configuration,
 ) -> anyhow::Result<Vec<ProcessedFile>> {
-    let cache = configuration.get_cache();
+    let cache = Arc::new(configuration.get_cache());
 
-    configuration
-        .included_files
-        .iter()
-        .map(|path| -> anyhow::Result<ProcessedFile> {
-            match cache.get(path) {
-                Ok(CacheResult::Processed(processed_file)) => {
-                    return Ok(processed_file);
-                }
+    let futures = configuration.included_files.iter().map(|path| {
+        let cache = Arc::clone(&cache);
+        async move {
+            match cache.get(path).await {
+                Ok(CacheResult::Processed(processed_file)) => Ok(processed_file),
                 Ok(CacheResult::Miss(empty_cache_entry)) => {
                     let processed_file = process_file(path, configuration)?;
-                    cache.write(&empty_cache_entry, &processed_file)?;
-                    return Ok(processed_file);
+                    cache.write(&empty_cache_entry, &processed_file).await?;
+                    Ok(processed_file)
                 }
-                Err(e) => {
-                    return Err(e);
-                }
+                Err(e) => Err(e),
             }
-        })
-        .collect()
+        }
+    });
+    let results = join_all(futures).await;
+    results.into_iter().collect()
 }
 
 #[cfg(test)]

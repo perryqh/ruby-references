@@ -2,12 +2,10 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     path::PathBuf,
+    sync::Arc,
 };
 
-use crate::{
-    cache::{create_cache_dir_idempotently, Cache, NoopCache},
-    cached_file::CachedFile,
-};
+use crate::cache::{cache::Cache, get_cache};
 
 pub struct Configuration {
     pub absolute_root: PathBuf,
@@ -73,20 +71,13 @@ impl Default for Configuration {
 }
 
 impl Configuration {
-    pub(crate) fn get_cache(&self) -> Box<dyn Cache + Send + Sync> {
-        if self.cache_enabled {
-            let cache_dir = self.cache_directory.join("ruby-references");
-
-            let _ = create_cache_dir_idempotently(&cache_dir);
-
-            Box::new(CachedFile { cache_dir })
-        } else {
-            Box::new(NoopCache {})
-        }
+    pub(crate) fn get_cache(&self) -> Arc<dyn Cache + Send + Sync> {
+        let cache_dir = self.cache_directory.join("ruby-references");
+        get_cache(self.cache_enabled, cache_dir)
     }
 
-    pub(crate) fn delete_cache(&self) -> anyhow::Result<()> {
-        Ok(std::fs::remove_dir_all(&self.cache_directory)?)
+    pub(crate) async fn delete_cache(&self) -> anyhow::Result<()> {
+        Ok(tokio::fs::remove_dir_all(&self.cache_directory).await?)
     }
 }
 #[cfg(test)]

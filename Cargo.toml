@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.82"
+async-trait = "0.1.80"
+futures = "0.3.30"
 glob = "0.3.1" 
 globset = "0.4.14"
 lib-ruby-parser = "4.0.6+ruby-3.1.2"
@@ -27,3 +29,8 @@ pretty_assertions = "1.4.0"
 predicates = "3.1.0"
 yaml-rust = "0.4.5"
 json = "0.12.4"
+criterion = "0.5.1"
+
+[[bench]]
+name = "parse_benchmark"
+harness = false

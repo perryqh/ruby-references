@@ -31,6 +31,7 @@ fn inferred_constants(configuration: &Configuration) -> Vec<ConstantDefinition> 
         .map(|absolute_autoload_path| {
             let glob_path = absolute_autoload_path.join("**/*.rb");
 
+            // TODO: if glob::glob blocks the tokio runtime, we should use tokio::fs::read_dir instead
             let files = glob::glob(glob_path.to_str().unwrap())
                 .expect("Failed to read glob pattern")
                 .filter_map(Result::ok)
