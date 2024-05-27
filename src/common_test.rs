@@ -3,6 +3,7 @@ pub mod common_test {
     use std::{
         collections::{HashMap, HashSet},
         path::PathBuf,
+        sync::Arc,
     };
 
     use regex::Regex;
@@ -15,7 +16,10 @@ pub mod common_test {
         zeitwerk::get_zeitwerk_constant_resolver,
     };
 
-    pub fn configuration_for_fixture(fixture_name: &str, cache_enabled: bool) -> Configuration {
+    pub fn configuration_for_fixture(
+        fixture_name: &str,
+        cache_enabled: bool,
+    ) -> Arc<Configuration> {
         let absolute_root = get_absolute_root(fixture_name);
         let autoload_paths = autoload_paths_for_fixture(&absolute_root).unwrap();
         let acronyms = acronyms(&absolute_root);
@@ -23,7 +27,7 @@ pub mod common_test {
         let pack_path = PackPath::new(&absolute_root);
         let extra_reference_fields_fn =
             Some(Box::new(pack_path) as Box<dyn ExtraReferenceFieldsFn>);
-        Configuration {
+        Arc::new(Configuration {
             absolute_root,
             autoload_paths,
             acronyms,
@@ -32,7 +36,7 @@ pub mod common_test {
             extra_reference_fields_fn,
             cache_enabled,
             ..Default::default()
-        }
+        })
     }
 
     pub struct PackPath {
@@ -113,7 +117,7 @@ pub mod common_test {
     ) -> anyhow::Result<Box<dyn ConstantResolver>> {
         let configuration = configuration_for_fixture(fixture_name, false);
 
-        Ok(get_zeitwerk_constant_resolver(&configuration))
+        Ok(get_zeitwerk_constant_resolver(configuration))
     }
 
     fn acronyms(root: &PathBuf) -> HashSet<String> {

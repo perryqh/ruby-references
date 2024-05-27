@@ -3,6 +3,7 @@ mod constant_resolver;
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use tracing::debug;
@@ -16,14 +17,14 @@ use crate::{
 use self::constant_resolver::ZeitwerkConstantResolver;
 
 pub fn get_zeitwerk_constant_resolver(
-    configuration: &Configuration,
+    configuration: Arc<Configuration>,
 ) -> Box<dyn ConstantResolver + Send + Sync> {
-    let constants = inferred_constants(configuration);
+    let constants = inferred_constants(configuration.clone());
 
     ZeitwerkConstantResolver::create(constants)
 }
 
-fn inferred_constants(configuration: &Configuration) -> Vec<ConstantDefinition> {
+fn inferred_constants(configuration: Arc<Configuration>) -> Vec<ConstantDefinition> {
     // First, we get a map of each autoload path to the files they map to.
     let autoload_paths_to_their_globbed_files = configuration
         .autoload_paths

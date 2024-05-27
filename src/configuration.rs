@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::cache::{cache::Cache, get_cache};
+use crate::cache::{cache::Cache, delete_cache, get_cache};
 
 pub struct Configuration {
     pub absolute_root: PathBuf,
@@ -22,8 +22,7 @@ pub struct Configuration {
     pub cache_directory: PathBuf,
     pub extra_reference_fields_fn: Option<Box<dyn ExtraReferenceFieldsFn>>,
 }
-
-pub trait ExtraReferenceFieldsFn {
+pub trait ExtraReferenceFieldsFn: Send + Sync {
     fn extra_reference_fields_fn(
         &self,
         relative_referencing_file: &str,
@@ -72,12 +71,15 @@ impl Default for Configuration {
 
 impl Configuration {
     pub(crate) fn get_cache(&self) -> Arc<dyn Cache + Send + Sync> {
-        let cache_dir = self.cache_directory.join("ruby-references");
-        get_cache(self.cache_enabled, cache_dir)
+        get_cache(self.cache_enabled, self.cache_dir())
     }
 
     pub(crate) async fn delete_cache(&self) -> anyhow::Result<()> {
-        Ok(tokio::fs::remove_dir_all(&self.cache_directory).await?)
+        delete_cache(self.cache_dir()).await
+    }
+
+    fn cache_dir(&self) -> PathBuf {
+        self.cache_directory.join("ruby-references")
     }
 }
 #[cfg(test)]

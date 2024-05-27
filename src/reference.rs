@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
@@ -51,7 +51,7 @@ impl PartialOrd for Reference {
 
 impl Reference {
     pub async fn from_unresolved_reference(
-        configuration: &Configuration,
+        configuration: Arc<Configuration>,
         constant_resolver: &(dyn ConstantResolver + Send + Sync),
         unresolved_reference: &UnresolvedReference,
         referencing_file_path: &Path,
@@ -131,17 +131,17 @@ impl Reference {
     }
 }
 
-pub async fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Reference>> {
-    let processed_files_to_check = parse(configuration)
+pub async fn all_references(configuration: Arc<Configuration>) -> anyhow::Result<Vec<Reference>> {
+    let processed_files_to_check = parse(configuration.clone())
         .await
         .context("failed to parse processed files")?;
-    let constant_resolver = get_zeitwerk_constant_resolver(configuration);
+    let constant_resolver = get_zeitwerk_constant_resolver(configuration.clone());
     debug!("Turning unresolved references into fully qualified references");
     let mut references = Vec::new();
     for process_file in processed_files_to_check.iter() {
         for unresolved_ref in process_file.unresolved_references.iter() {
             let new_references = Reference::from_unresolved_reference(
-                configuration,
+                configuration.clone(),
                 constant_resolver.as_ref(),
                 unresolved_ref,
                 &process_file.absolute_path,
@@ -167,7 +167,7 @@ mod tests {
     #[tokio::test]
     async fn simple_all_references() -> anyhow::Result<()> {
         let configuration = configuration_for_fixture(SIMPLE_APP, true);
-        let mut references = all_references(&configuration).await?;
+        let mut references = all_references(configuration.clone()).await?;
         references.sort();
         let expected = json::parse(&fs::read_to_string(
             "tests/fixtures/simple_app/references.json",
@@ -209,7 +209,8 @@ mod tests {
             assert_eq!(reference, expected);
         }
 
-        let mut cache_hit_references = all_references(&configuration).await?;
+        let configuration = configuration_for_fixture(SIMPLE_APP, true);
+        let mut cache_hit_references = all_references(configuration.clone()).await?;
         cache_hit_references.sort();
         for (reference, expected) in cache_hit_references.iter().zip(expected.iter()) {
             assert_eq!(reference, expected);

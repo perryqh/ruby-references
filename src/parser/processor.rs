@@ -1,6 +1,7 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use anyhow::Context;
@@ -14,9 +15,9 @@ use super::{self_reference_filterer, ProcessedFile};
 
 pub fn process_file(
     path: &PathBuf,
-    configuration: &configuration::Configuration,
+    configuration: Arc<configuration::Configuration>,
 ) -> anyhow::Result<ProcessedFile> {
-    let contents = match get_file_type(path, configuration) {
+    let contents = match get_file_type(path, configuration.clone()) {
         Some(SupportedFileType::Ruby) => file_read_contents(path)?,
         Some(SupportedFileType::Erb) => {
             let c = file_read_contents(path)?;
@@ -41,7 +42,7 @@ enum SupportedFileType {
 
 fn get_file_type(
     path: &Path,
-    configuration: &configuration::Configuration,
+    configuration: Arc<configuration::Configuration>,
 ) -> Option<SupportedFileType> {
     let extension = path.extension();
 
@@ -88,7 +89,7 @@ fn file_read_contents(path: &PathBuf) -> anyhow::Result<String> {
 fn process_from_contents(
     contents: String,
     path: &PathBuf,
-    configuration: &configuration::Configuration,
+    configuration: Arc<configuration::Configuration>,
 ) -> anyhow::Result<ProcessedFile> {
     let lookup = LineColLookup::new(&contents);
 
@@ -136,11 +137,11 @@ mod tests {
 
     fn process(path: &str, include_self_references: bool) -> ProcessedFile {
         let path = PathBuf::from(path);
-        let configuration = Configuration {
+        let configuration = Arc::new(Configuration {
             include_reference_is_definition: include_self_references,
             ..Default::default()
-        };
-        process_file(&path, &configuration).unwrap()
+        });
+        process_file(&path, configuration).unwrap()
     }
     #[test]
     fn process_from_path() {
@@ -242,10 +243,10 @@ mod tests {
             ),
             ("tests/fixtures/my.rs", None),
         ];
-        let configuration = Configuration::default();
+        let configuration = Arc::new(Configuration::default());
         for (path, expected) in test_mapping {
             let path = PathBuf::from(path);
-            assert_eq!(get_file_type(&path, &configuration), expected);
+            assert_eq!(get_file_type(&path, configuration.clone()), expected);
         }
     }
 }

@@ -22,6 +22,10 @@ pub(crate) fn get_cache(enabled: bool, cache_dir: PathBuf) -> Arc<dyn Cache + Se
     }
 }
 
+pub(crate) async fn delete_cache(cache_dir: PathBuf) -> anyhow::Result<()> {
+    Ok(tokio::fs::remove_dir_all(cache_dir).await?)
+}
+
 pub enum CacheResult {
     Processed(ProcessedFile),
     Miss(EmptyCacheEntry),
@@ -80,4 +84,45 @@ pub(crate) async fn file_content_digest(file: &Path) -> anyhow::Result<String> {
 fn cache_file_path_from_digest(cache_directory: &Path, file_name_digest: &str) -> PathBuf {
     let cached_directory_for_digest = cache_directory.join(&file_name_digest[..2]);
     cached_directory_for_digest.join(&file_name_digest[2..])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn is_tmp_cache_packwerk_empty(directory: &str) -> Result<bool, std::io::Error> {
+        let dir_entries = std::fs::read_dir(directory);
+        match dir_entries {
+            Ok(mut dir_entries) => {
+                let is_empty = dir_entries.next().is_none();
+                Ok(is_empty)
+            }
+            Err(err) => match err.kind() {
+                // The directory is empty if we can't find it.
+                std::io::ErrorKind::NotFound => Ok(true),
+                _ => Err(err),
+            },
+        }
+    }
+
+    #[tokio::test]
+    async fn test_delete_cache() -> anyhow::Result<()> {
+        let path = "tests/fixtures/simple_app/tmp/cache/packwerk";
+        assert!(is_tmp_cache_packwerk_empty(path).unwrap());
+
+        // Write some dummy file to `tmp/cache/packwerk` to simulate a cache.
+        let cache_dir = PathBuf::from("tests/fixtures/simple_app/tmp/cache/packwerk");
+
+        std::fs::create_dir_all(&cache_dir)?;
+        let dummy_file = cache_dir.join("dummy_file");
+        std::fs::write(dummy_file, "dummy file")?;
+
+        assert!(!is_tmp_cache_packwerk_empty(path).unwrap());
+
+        delete_cache(PathBuf::from(path)).await?;
+
+        assert!(is_tmp_cache_packwerk_empty(path).unwrap());
+
+        Ok(())
+    }
 }
