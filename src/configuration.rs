@@ -28,8 +28,8 @@ pub struct Configuration {
 pub trait ExtraReferenceFieldsFn: Sync + Send {
     fn extra_reference_fields_fn(
         &self,
-        relative_referencing_file: &str,
-        relative_defining_file: Option<&str>,
+        referencing_file_path: &PathBuf,
+        defining_file_path: Option<&PathBuf>,
     ) -> HashMap<String, String>;
 }
 

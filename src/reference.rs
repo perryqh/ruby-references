@@ -98,7 +98,7 @@ impl Reference {
                     let extra_fields = configuration
                         .extra_reference_fields_fn
                         .as_ref()
-                        .map(|fn_| fn_.extra_reference_fields_fn(&relative_referencing_file, relative_defining_file.as_deref()))
+                        .map(|fn_| fn_.extra_reference_fields_fn(&referencing_file_path.to_path_buf(), Some(absolute_path_of_definition)))
                         .unwrap_or_default();
 
                     Ok(Reference {
@@ -117,7 +117,9 @@ impl Reference {
             let extra_fields = configuration
                 .extra_reference_fields_fn
                 .as_ref()
-                .map(|fn_| fn_.extra_reference_fields_fn(&relative_referencing_file, None))
+                .map(|fn_| {
+                    fn_.extra_reference_fields_fn(&referencing_file_path.to_path_buf(), None)
+                })
                 .unwrap_or_default();
 
             Ok(vec![Reference {
