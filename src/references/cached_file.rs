@@ -7,10 +7,10 @@ use std::path::Path;
 use std::path::PathBuf;
 use tracing::warn;
 
-use crate::cache::create_cache_dir_idempotently;
-use crate::cache::CacheResult;
-use crate::cache::EmptyCacheEntry;
-use crate::parser::ProcessedFile;
+use crate::references::cache::create_cache_dir_idempotently;
+use crate::references::cache::CacheResult;
+use crate::references::cache::EmptyCacheEntry;
+use crate::references::parser::ProcessedFile;
 
 use super::cache::Cache;
 
@@ -108,7 +108,7 @@ pub fn read_json_file(path: &PathBuf) -> anyhow::Result<CacheEntry> {
 mod tests {
     use std::fs;
 
-    use crate::{
+    use crate::references::{
         cache::file_content_digest,
         parser::{Range, UnresolvedReference},
     };
@@ -180,7 +180,7 @@ mod tests {
         let corrupt_contents: String = String::from(
             r#"{
   "file_contents_digest":"e57a05216069923190a4e03d264d9677",
-  "processed_file": 
+  "processed_file":
 }"#,
         );
 

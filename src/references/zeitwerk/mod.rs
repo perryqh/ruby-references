@@ -1,3 +1,4 @@
+mod cache;
 mod constant_resolver;
 
 use std::{
@@ -5,29 +6,30 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use tracing::debug;
 
-use crate::{
+use crate::references::{
     configuration::Configuration,
     constant_resolver::{ConstantDefinition, ConstantResolver},
     parser::inflector_shim,
 };
-
-use self::constant_resolver::ZeitwerkConstantResolver;
 
 pub fn get_zeitwerk_constant_resolver(
     configuration: &Configuration,
 ) -> Box<dyn ConstantResolver + Send + Sync> {
     let constants = inferred_constants(configuration);
 
-    ZeitwerkConstantResolver::create(constants)
+    crate::references::zeitwerk::constant_resolver::ZeitwerkConstantResolver::create(constants)
 }
 
 fn inferred_constants(configuration: &Configuration) -> Vec<ConstantDefinition> {
+    let cache_data = cache::get_constant_resolver_cache(&configuration.cache_directory);
     // First, we get a map of each autoload path to the files they map to.
     let autoload_paths_to_their_globbed_files = configuration
         .autoload_paths
         .keys()
+        .par_bridge()
         .map(|absolute_autoload_path| {
             let glob_path = absolute_autoload_path.join("**/*.rb");
 
@@ -68,19 +70,36 @@ fn inferred_constants(configuration: &Configuration) -> Vec<ConstantDefinition> 
     debug!("Inferring constants from file name");
     let constants: Vec<ConstantDefinition> = file_to_longest_path
         .into_iter()
+        .par_bridge()
         .map(|(absolute_path_of_definition, absolute_autoload_path)| {
-            let default_namespace = configuration
-                .autoload_paths
-                .get(absolute_autoload_path)
-                .unwrap();
-            inferred_constant_from_file(
-                absolute_path_of_definition,
-                absolute_autoload_path,
-                &configuration.acronyms,
-                default_namespace,
-            )
+            if let Some(fully_qualified_name) = cache_data
+                .file_definition_map
+                .get(absolute_path_of_definition)
+            {
+                ConstantDefinition {
+                    fully_qualified_name: fully_qualified_name.to_owned(),
+                    absolute_path_of_definition: absolute_path_of_definition.to_owned(),
+                }
+            } else {
+                let default_namespace = configuration
+                    .autoload_paths
+                    .get(absolute_autoload_path)
+                    .unwrap();
+                inferred_constant_from_file(
+                    absolute_path_of_definition,
+                    absolute_autoload_path,
+                    &configuration.acronyms,
+                    default_namespace,
+                )
+            }
         })
         .collect::<Vec<ConstantDefinition>>();
+
+    cache::write_cache_constant_definitions(
+        &constants,
+        &configuration.reference_cache_dir(),
+        configuration.cache_enabled,
+    );
 
     constants
 }
@@ -107,7 +126,7 @@ fn inferred_constant_from_file(
 
 #[cfg(test)]
 mod tests {
-    use crate::common_test::common_test::{
+    use crate::references::common_test::common_test::{
         get_absolute_root, get_zeitwerk_constant_resolver_for_fixture, SIMPLE_APP,
     };
 

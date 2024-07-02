@@ -2,6 +2,7 @@
 pub mod common_test {
     use std::{
         collections::{HashMap, HashSet},
+        fs,
         path::PathBuf,
     };
 
@@ -9,7 +10,7 @@ pub mod common_test {
     use walkdir::WalkDir;
     use yaml_rust::YamlLoader;
 
-    use crate::{
+    use crate::references::{
         configuration::{Configuration, ExtraReferenceFieldsFn},
         constant_resolver::ConstantResolver,
         zeitwerk::get_zeitwerk_constant_resolver,
@@ -37,6 +38,7 @@ pub mod common_test {
 
     pub struct PackPath {
         pack_names: Vec<String>,
+        root: PathBuf,
     }
 
     impl PackPath {
@@ -64,17 +66,27 @@ pub mod common_test {
                     }),
             );
             pack_names.sort();
-            PackPath { pack_names }
+            PackPath {
+                root: root.clone(),
+                pack_names,
+            }
         }
 
-        pub fn find_pack_name(&self, file_path: &str) -> Option<String> {
+        pub fn find_pack_name(&self, file_path: &PathBuf) -> Option<String> {
             // pack names are sorted
             // once a pack_name is found that contains the file_path
             // use the longest one until the file_path is not found
             let mut pack_name = ".";
             let mut containing = false;
+
             for pn in self.pack_names.iter() {
-                if file_path.contains(pn) {
+                let pn_path = self.root.join(pn);
+                let pn_path = match fs::canonicalize(pn_path) {
+                    Ok(pn_path) => pn_path,
+                    Err(e) => panic!("Failed to canonicalize pack name: {:?}", e),
+                };
+
+                if file_path.starts_with(&pn_path) {
                     if pn.len() > pack_name.len() {
                         pack_name = pn;
                         containing = true;
@@ -92,14 +104,14 @@ pub mod common_test {
     impl ExtraReferenceFieldsFn for PackPath {
         fn extra_reference_fields_fn(
             &self,
-            relative_referencing_file: &str,
-            relative_defining_file: Option<&str>,
+            referencing_file_path: &PathBuf,
+            defining_file_path: Option<&PathBuf>,
         ) -> HashMap<String, String> {
             let mut extra_fields = HashMap::new();
-            if let Some(referencing_pack) = self.find_pack_name(relative_referencing_file) {
+            if let Some(referencing_pack) = self.find_pack_name(referencing_file_path) {
                 extra_fields.insert("referencing_pack_name".to_string(), referencing_pack);
             }
-            if let Some(defining_file) = relative_defining_file {
+            if let Some(defining_file) = defining_file_path {
                 if let Some(defining_pack) = self.find_pack_name(defining_file) {
                     extra_fields.insert("defining_pack_name".to_string(), defining_pack);
                 }
@@ -221,11 +233,13 @@ pub mod common_test {
         );
 
         assert_eq!(
-            pack_path.find_pack_name("frontend/ui_helper.rb"),
+            pack_path.find_pack_name(&PathBuf::from("frontend/ui_helper.rb")),
             Some(".".to_string())
         );
+
+        let bar_path = fs::canonicalize(root.join("packs/foo/app/services/foo/bar.rb")).unwrap();
         assert_eq!(
-            pack_path.find_pack_name("packs/foo/app/services/foo/bar.rb"),
+            pack_path.find_pack_name(&bar_path),
             Some("packs/foo".to_string())
         );
     }

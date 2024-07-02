@@ -2,7 +2,7 @@ use tracing::debug;
 
 use std::collections::HashMap;
 
-use crate::{
+use crate::references::{
     constant_resolver::{ConstantDefinition, ConstantResolver},
     parser::namespace_calculator::combine_namespace_with_constant_name,
 };

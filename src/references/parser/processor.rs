@@ -8,7 +8,7 @@ use lib_ruby_parser::{traverse::visitor::Visitor, Node, Parser, ParserOptions};
 use line_col::LineColLookup;
 use regex::Regex;
 
-use crate::{configuration, parser::collector::ReferenceCollector};
+use crate::references::{configuration, parser::collector::ReferenceCollector};
 
 use super::{self_reference_filterer, ProcessedFile};
 
@@ -130,7 +130,7 @@ fn build_ast(contents: String) -> Option<Box<Node>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::configuration::Configuration;
+    use crate::references::configuration::Configuration;
 
     use super::*;
 
