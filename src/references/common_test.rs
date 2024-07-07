@@ -78,7 +78,6 @@ pub mod common_test {
             // use the longest one until the file_path is not found
             let mut pack_name = ".";
             let mut containing = false;
-
             for pn in self.pack_names.iter() {
                 let pn_path = self.root.join(pn);
                 let pn_path = match fs::canonicalize(pn_path) {
@@ -97,6 +96,7 @@ pub mod common_test {
                     }
                 }
             }
+
             Some(pack_name.to_string())
         }
     }

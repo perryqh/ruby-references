@@ -20,24 +20,21 @@ pub fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Refer
     let processed_files_to_check =
         parse(configuration).context("failed to parse processed files")?;
     let constant_resolver = get_zeitwerk_constant_resolver(configuration);
+
     let references: anyhow::Result<Vec<Reference>> = processed_files_to_check
         .par_iter()
-        .try_fold(
-            Vec::new,
-            // Start with an empty vector for each thread
-            |mut acc, processed_file| {
-                for unresolved_ref in processed_file.unresolved_references.iter() {
-                    let new_references = Reference::from_unresolved_reference(
-                        configuration,
-                        constant_resolver.as_ref(),
-                        unresolved_ref,
-                        &processed_file.absolute_path,
-                    )?;
-                    acc.extend(new_references);
-                }
-                Ok(acc)
-            },
-        )
+        .try_fold(Vec::new, |mut acc, processed_file| {
+            for unresolved_ref in processed_file.unresolved_references.iter() {
+                let new_references = Reference::from_unresolved_reference(
+                    configuration,
+                    constant_resolver.as_ref(),
+                    unresolved_ref,
+                    &processed_file.absolute_path,
+                )?;
+                acc.extend(new_references);
+            }
+            Ok(acc)
+        })
         .try_reduce(Vec::new, |mut acc, mut vec| {
             acc.append(&mut vec);
             Ok(acc)
@@ -47,54 +44,30 @@ pub fn all_references(configuration: &Configuration) -> anyhow::Result<Vec<Refer
 
 #[cfg(test)]
 mod tests {
-    use crate::references::parser::SourceLocation;
     use std::collections::HashMap;
     use std::fs;
 
     use super::*;
     use crate::references::common_test::common_test::{configuration_for_fixture, SIMPLE_APP};
+    use parser::SourceLocation;
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn simple_all_references() -> anyhow::Result<()> {
-        let configuration = configuration_for_fixture(SIMPLE_APP, true);
+    fn expected_from_references_json(
+        expected_references_json_path: &str,
+    ) -> anyhow::Result<Vec<Reference>> {
+        let file = std::fs::File::open(expected_references_json_path)?;
+        let reader = std::io::BufReader::new(file);
+        let expected: Vec<Reference> = serde_json::from_reader(reader)?;
+        Ok(expected)
+    }
+
+    fn test_references(fixture_path: &str, expected: Vec<Reference>) -> anyhow::Result<()> {
+        let configuration = configuration_for_fixture(fixture_path, true);
         let mut references = all_references(&configuration)?;
         references.sort();
-        let expected = json::parse(&fs::read_to_string(
-            "tests/fixtures/simple_app/references.json",
-        )?)?;
-        let mut expected = expected
-            .members()
-            .map(|m| {
-                let mut extra_fields = HashMap::new();
-                extra_fields.insert(
-                    "referencing_pack_name".to_string(),
-                    m["referencing_pack_name"].as_str().unwrap().to_string(),
-                );
-                if let Some(defining_pack_name) = m["defining_pack_name"].as_str() {
-                    extra_fields.insert(
-                        "defining_pack_name".to_string(),
-                        defining_pack_name.to_string(),
-                    );
-                }
-                Reference {
-                    constant_name: m["constant_name"].as_str().unwrap().to_string(),
-                    relative_referencing_file: m["relative_referencing_file"]
-                        .as_str()
-                        .unwrap()
-                        .to_string(),
-                    relative_defining_file: m["relative_defining_file"]
-                        .as_str()
-                        .map(|s| s.to_string()),
-                    source_location: SourceLocation {
-                        line: m["source_location"]["line"].as_usize().unwrap(),
-                        column: m["source_location"]["column"].as_usize().unwrap(),
-                    },
-                    extra_fields,
-                }
-            })
-            .collect::<Vec<Reference>>();
-        expected.sort();
+        //let references_json = serde_json::to_string(&references)?;
+        //std::fs::write(format!("{}/references.json", fixture_path), references_json)?;
+
         assert_eq!(references.len(), expected.len());
         for (reference, expected) in references.iter().zip(expected.iter()) {
             assert_eq!(reference, expected);
@@ -107,5 +80,19 @@ mod tests {
         }
         configuration.delete_cache()?;
         Ok(())
+    }
+
+    #[test]
+    fn simple_all_references() -> anyhow::Result<()> {
+        let expected = expected_from_references_json("tests/fixtures/simple_app/references.json")?;
+        test_references(SIMPLE_APP, expected)
+    }
+
+    #[test]
+    fn relationship_references() -> anyhow::Result<()> {
+        let expected = expected_from_references_json(
+            "tests/fixtures/app_with_rails_relationships/references.json",
+        )?;
+        test_references("tests/fixtures/app_with_rails_relationships", expected)
     }
 }
