@@ -7,8 +7,11 @@ use ruby_inflector::case::{
 
 // This is a list of plural to singular words that are not handled by the inflector
 // The plural words are
-const CLASS_CASE_TO_SINGULAR: [(&str, &str); 4] = [
-    ("Censuse", "Census"),
+const CLASS_CASE_TO_SINGULAR: [(&str, &str); 7] = [
+    ("Statuse$", "Status"),
+    ("Statu$", "Status"),
+    ("Statuss$", "Status"),
+    ("Censuse$", "Census"),
     ("Leafe", "Leave"),
     ("Lefe", "Leave"),
     ("Daum", "Datum"),
@@ -33,24 +36,11 @@ pub fn to_class_case(s: &str, should_singularize: bool, acronyms: &HashSet<Strin
         to_case_camel_like(s, options, acronyms)
     };
 
-    if class_name.contains("Statu") {
-        let re = Regex::new("Statuse$").unwrap();
-        class_name = re.replace_all(&class_name, "Status").to_string();
-        let re = Regex::new("Statu$").unwrap();
-
-        class_name = re.replace_all(&class_name, "Status").to_string();
-
-        let re = Regex::new("Statuss").unwrap();
-        re.replace_all(&class_name, "Status").to_string();
-    }
-
     CLASS_CASE_TO_SINGULAR
         .into_iter()
         .for_each(|(plural, singular)| {
-            if class_name.contains(plural) {
-                let re = Regex::new(plural).unwrap();
-                class_name = re.replace_all(&class_name, singular).to_string();
-            }
+            let re = Regex::new(plural).unwrap();
+            class_name = re.replace_all(&class_name, singular).to_string();
         });
 
     class_name
@@ -165,8 +155,11 @@ mod tests {
             ("lefe", true, "Leave"),
             ("leaves", false, "Leaves"),
             ("daum", true, "Datum"),
-            ("statuss", false, "Statuss"),
+            ("statuss", false, "Status"),
+            ("statuss_foo", false, "StatussFoo"),
+            ("statuss", true, "Status"),
             ("statuses", true, "Status"),
+            ("statuses_foo", true, "StatusesFoo"),
             ("censuse", true, "Census"),
         ];
 
