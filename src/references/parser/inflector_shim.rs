@@ -5,6 +5,18 @@ use ruby_inflector::case::{
     to_case_camel_like, to_class_case as to_class_case_original, CamelOptions,
 };
 
+// This is a list of plural to singular words that are not handled by the inflector
+// The plural words are
+const CLASS_CASE_TO_SINGULAR: [(&str, &str); 4] = [
+    ("Censuse", "Census"),
+    ("Leafe", "Leave"),
+    ("Lefe", "Leave"),
+    ("Daum", "Datum"),
+];
+
+// See https://github.com/whatisinternet/Inflector/pull/87
+// Note that as of the PR that adds this comment, we are now using https://github.com/alexevanczuk/ruby_inflector,
+// so that we have an easier time making this inflector more specific to ruby applications (for now)
 pub fn to_class_case(s: &str, should_singularize: bool, acronyms: &HashSet<String>) -> String {
     let options = CamelOptions {
         new_word: true,
@@ -32,20 +44,14 @@ pub fn to_class_case(s: &str, should_singularize: bool, acronyms: &HashSet<Strin
         re.replace_all(&class_name, "Status").to_string();
     }
 
-    if class_name.contains("Daum") {
-        let re = Regex::new("Daum").unwrap();
-        class_name = re.replace_all(&class_name, "Datum").to_string();
-    }
-
-    if class_name.contains("Lefe") {
-        let re = Regex::new("Lefe").unwrap();
-        class_name = re.replace_all(&class_name, "Leave").to_string();
-    }
-
-    if class_name.contains("Leafe") {
-        let re = Regex::new("Leafe").unwrap();
-        class_name = re.replace_all(&class_name, "Leave").to_string();
-    }
+    CLASS_CASE_TO_SINGULAR
+        .into_iter()
+        .for_each(|(plural, singular)| {
+            if class_name.contains(plural) {
+                let re = Regex::new(plural).unwrap();
+                class_name = re.replace_all(&class_name, singular).to_string();
+            }
+        });
 
     class_name
 }
@@ -149,5 +155,28 @@ mod tests {
         let actual = camelize("my_factory", &acronyms);
         let expected = "MyFacTory";
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_to_class_case() {
+        let tests = vec![
+            ("my_string", false, "MyString"),
+            ("censuses", true, "Census"),
+            ("lefe", true, "Leave"),
+            ("leaves", false, "Leaves"),
+            ("daum", true, "Datum"),
+            ("statuss", false, "Statuss"),
+            ("statuses", true, "Status"),
+            ("censuse", true, "Census"),
+        ];
+
+        for (input, should_singularize, expected) in tests {
+            let actual = to_class_case(input, should_singularize, &HashSet::new());
+            assert_eq!(
+                expected, actual,
+                "Failed for input: {}, and singularize: {}",
+                input, should_singularize
+            );
+        }
     }
 }
